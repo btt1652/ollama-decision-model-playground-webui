@@ -530,10 +530,13 @@
     font-family: var(--font-mono);
     font-size: 10px;
     line-height: 1.5;
-    max-height: 180px;
+    height: 65vh;
+    min-height: 100px;
+    max-height: 90vh;
     overflow-y: auto;
     white-space: pre-wrap;
     word-break: break-all;
+    resize: vertical;
   }
 
   .json-key { color: var(--json-key); }
@@ -783,11 +786,14 @@
     font-family: var(--font-mono);
     font-size: 10px;
     line-height: 1.5;
+    height: 15vh;
+    min-height: 60px;
+    max-height: 40vh;
+    overflow-y: auto;
     white-space: pre-wrap;
     word-break: break-all;
-    max-height: 150px;
-    overflow-y: auto;
     color: var(--text-secondary);
+    resize: vertical;
   }
 
   /* ── Scrollbar ── */
