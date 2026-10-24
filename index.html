@@ -1661,26 +1661,40 @@
     }
   });
 
-  // ── Panel Divider Drag ──
+    // ── Panel Divider Drag ──
   (function() {
-    function setupDivider(divider, leftPanel, rightPanel) {
+    const leftPanel = document.querySelector('.panel-left');
+    const middlePanel = document.querySelector('.panel-middle');
+    const rightPanel = document.querySelector('.panel-right');
+
+    function setupDivider(divider, panelA, panelB, fixedPanel) {
       let isDragging = false;
       let startX = 0;
-      let startLeftWidth = 0;
-      let startRightWidth = 0;
+      let startAWidth = 0;
+      let startBWidth = 0;
       let totalWidth = 0;
 
-      function onMouseMove(e) {
+      function onMove(e) {
         if (!isDragging) return;
-        const dx = e.clientX - startX;
+        const clientX = e.clientX !== undefined ? e.clientX : e.touches[0].clientX;
+        const dx = clientX - startX;
         const deltaPct = (dx / totalWidth) * 100;
-        const newLeftPct = Math.max(15, Math.min(85, startLeftWidth + deltaPct));
-        const newRightPct = 100 - newLeftPct;
-        leftPanel.style.width = newLeftPct + '%';
-        rightPanel.style.width = newRightPct + '%';
+        const newA = Math.max(15, Math.min(85, startAWidth + deltaPct));
+        const newB = Math.max(15, Math.min(85, startBWidth - deltaPct));
+        const remaining = 100 - newA - newB;
+        if (remaining < 15) {
+          const excess = 15 - remaining;
+          panelA.style.width = (newA - excess / 2) + '%';
+          panelB.style.width = (newB - excess / 2) + '%';
+          fixedPanel.style.width = '15%';
+        } else {
+          panelA.style.width = newA + '%';
+          panelB.style.width = newB + '%';
+          fixedPanel.style.width = remaining + '%';
+        }
       }
 
-      function onMouseUp() {
+      function onUp() {
         if (!isDragging) return;
         isDragging = false;
         divider.classList.remove('dragging');
@@ -1693,15 +1707,15 @@
         divider.classList.add('dragging');
         startX = e.clientX;
         totalWidth = divider.parentElement.getBoundingClientRect().width;
-        startLeftWidth = parseFloat(leftPanel.style.width) || leftPanel.offsetWidth / totalWidth * 100;
-        startRightWidth = parseFloat(rightPanel.style.width) || rightPanel.offsetWidth / totalWidth * 100;
+        startAWidth = panelA.offsetWidth / totalWidth * 100;
+        startBWidth = panelB.offsetWidth / totalWidth * 100;
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
         e.preventDefault();
       });
 
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
 
       divider.addEventListener('touchstart', (e) => {
         isDragging = true;
@@ -1709,8 +1723,8 @@
         const touch = e.touches[0];
         startX = touch.clientX;
         totalWidth = divider.parentElement.getBoundingClientRect().width;
-        startLeftWidth = parseFloat(leftPanel.style.width) || leftPanel.offsetWidth / totalWidth * 100;
-        startRightWidth = parseFloat(rightPanel.style.width) || rightPanel.offsetWidth / totalWidth * 100;
+        startAWidth = panelA.offsetWidth / totalWidth * 100;
+        startBWidth = panelB.offsetWidth / totalWidth * 100;
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
         e.preventDefault();
@@ -1718,24 +1732,14 @@
 
       document.addEventListener('touchmove', (e) => {
         if (!isDragging) return;
-        const touch = e.touches[0];
-        const dx = touch.clientX - startX;
-        const deltaPct = (dx / totalWidth) * 100;
-        const newLeftPct = Math.max(15, Math.min(85, startLeftWidth + deltaPct));
-        const newRightPct = 100 - newLeftPct;
-        leftPanel.style.width = newLeftPct + '%';
-        rightPanel.style.width = newRightPct + '%';
+        onMove(e);
       }, { passive: false });
 
-      document.addEventListener('touchend', onMouseUp);
+      document.addEventListener('touchend', onUp);
     }
 
-    const leftPanel = document.querySelector('.panel-left');
-    const middlePanel = document.querySelector('.panel-middle');
-    const rightPanel = document.querySelector('.panel-right');
-
-    setupDivider(dom.panelDivider1, leftPanel, middlePanel);
-    setupDivider(dom.panelDivider2, middlePanel, rightPanel);
+    setupDivider(dom.panelDivider1, leftPanel, middlePanel, rightPanel);
+    setupDivider(dom.panelDivider2, middlePanel, rightPanel, leftPanel);
   })();
 
   // ── Init ──
