@@ -847,9 +847,12 @@
   <div class="panel panel-left">
     <div class="panel-header">
       <span>Request</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-send btn-sm" id="btnSend">▶ Send</button>
+        <button class="btn btn-clear btn-sm" id="btnClear">Clear</button>
+      </div>
     </div>
     <div class="panel-body">
-      <!-- Model -->
       <div class="form-group">
         <label for="modelInput">Model</label>
         <input type="text" id="modelInput" value="clef-flash:9b" placeholder="e.g. clef-flash:9b">
@@ -886,11 +889,6 @@
         </div>
       </div>
 
-      <!-- Actions -->
-      <div class="actions-row">
-        <button class="btn btn-send" id="btnSend">▶ Send</button>
-        <button class="btn btn-clear" id="btnClear">Clear</button>
-      </div>
     </div>
   </div>
 
