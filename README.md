@@ -22,10 +22,10 @@ A local web playground for interacting with Ollama decision models (e.g. `clef-f
 
 ## Features
 
-- **Request builder** — edit model, state (context text), and decision questions
+| **Three-panel layout** — Request (left), JSON Preview (middle), Response (right), all resizable by dragging dividers |
 - **Question types** — `noul` (yes/no probability), `choice` (select from options), `score` (ranked levels)
-- **Live Request JSON preview** — see the exact payload sent to Ollama's `/v1/systemone` endpoint
-- **cURL export** — copy the equivalent curl command for any request
+| **Live Request JSON preview** — real-time payload in the middle panel |
+- **cURL export** — copy the equivalent curl command, shown live in the middle panel
 - **Structured answer display** — answers rendered with probability bars, confidence scores, and highlight colors
 - **Raw JSON view** — toggle between formatted answers and raw JSON response
 - **Image support** — upload files or paste URLs (Clef models only); sent as base64 in the `images` field

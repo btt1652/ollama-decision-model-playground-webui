@@ -118,6 +118,7 @@
     display: flex;
     flex: 1;
     overflow: hidden;
+    position: relative;
   }
 
   .panel {
@@ -127,12 +128,43 @@
   }
 
   .panel-left {
-    width: 55%;
+    width: 40%;
     border-right: 1px solid var(--border);
+    min-width: 200px;
   }
 
   .panel-right {
-    width: 45%;
+    width: 35%;
+    min-width: 200px;
+  }
+
+  .panel-divider {
+    width: 8px;
+    background: var(--border);
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background 0.2s;
+    position: relative;
+  }
+  .panel-divider:hover,
+  .panel-divider.dragging {
+    background: var(--accent);
+  }
+  .panel-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 40px;
+    background: var(--text-muted);
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .panel-divider:hover::after {
+    opacity: 1;
   }
 
   .panel-header {
@@ -703,9 +735,44 @@
   }
   .copy-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
 
+  /* ── Middle Panel (JSON Preview) ── */
+  .panel-middle {
+    width: 25%;
+    border-right: 1px solid var(--border);
+    min-width: 180px;
+    min-height: 70vh;
+    height: 70vh;
+    resize: both;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .middle-panel-header {
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .middle-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+  }
+
   /* ── curl preview ── */
   .curl-section {
-    margin-top: 8px;
+    margin-top: 10px;
   }
 
   .curl-output {
@@ -718,7 +785,7 @@
     line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-all;
-    max-height: 120px;
+    max-height: 150px;
     overflow-y: auto;
     color: var(--text-secondary);
   }
@@ -732,8 +799,11 @@
   /* ── Responsive ── */
   @media (max-width: 900px) {
     .main { flex-direction: column; }
-    .panel-left { width: 100%; height: 55%; border-right: none; border-bottom: 1px solid var(--border); }
-    .panel-right { width: 100%; height: 45%; }
+    .panel-left { width: 100%; height: 30%; border-right: none; border-bottom: 1px solid var(--border); }
+    .panel-divider { width: 100%; height: 6px; cursor: row-resize; }
+    .panel-divider::after { width: 40px; height: 2px; top: auto; bottom: auto; left: 50%; transform: translateX(-50%); }
+    .panel-middle { width: 100%; height: 35%; min-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); resize: vertical; }
+    .panel-right { width: 100%; height: 35%; }
   }
 
   /* ── Toast ── */
@@ -775,7 +845,6 @@
   <div class="panel panel-left">
     <div class="panel-header">
       <span>Request</span>
-      <button class="btn btn-sm btn-secondary" id="btnCopyRequest" title="Copy request JSON">📋 Copy JSON</button>
     </div>
     <div class="panel-body">
       <!-- Model -->
@@ -820,17 +889,33 @@
         <button class="btn btn-send" id="btnSend">▶ Send</button>
         <button class="btn btn-clear" id="btnClear">Clear</button>
       </div>
+    </div>
+  </div>
 
-      <!-- Request JSON Preview -->
-      <div class="request-preview">
+  <!-- ── DRAGGABLE DIVIDER ── -->
+  <div class="panel-divider" id="panelDivider1"></div>
+
+  <!-- ── MIDDLE PANEL: Request JSON Preview ── -->
+  <div class="panel panel-middle">
+    <div class="middle-panel-header">
+      <span>Request JSON</span>
+      <button class="btn btn-sm btn-secondary" id="btnCopyRequest" title="Copy request JSON">📋 Copy</button>
+    </div>
+    <div class="middle-panel-body">
+      <div class="request-json" id="requestJsonPreview">{}</div>
+
+      <div class="curl-section">
         <div class="request-preview-header">
-          <span>Request JSON</span>
-          <button class="btn btn-sm btn-secondary" id="btnCopyCurl" title="Copy equivalent cURL command">📋 cURL</button>
+          <span>cURL</span>
+          <button class="btn btn-sm btn-secondary" id="btnCopyCurl" title="Copy cURL command">📋 Copy</button>
         </div>
-        <div class="request-json" id="requestJsonPreview">{}</div>
+        <div class="curl-output" id="curlOutput"></div>
       </div>
     </div>
   </div>
+
+  <!-- ── DRAGGABLE DIVIDER ── -->
+  <div class="panel-divider" id="panelDivider2"></div>
 
   <!-- ── RIGHT PANEL: Response ── -->
   <div class="panel panel-right">
@@ -898,6 +983,9 @@
     btnCopyRequest: $('#btnCopyRequest'),
     btnCopyResponse: $('#btnCopyResponse'),
     btnCopyCurl: $('#btnCopyCurl'),
+    panelDivider1: $('#panelDivider1'),
+    panelDivider2: $('#panelDivider2'),
+    curlOutput: $('#curlOutput'),
   };
 
   // ── Toast ──
@@ -1334,6 +1422,9 @@
   function updateRequestPreview() {
     const payload = buildRequestPayload();
     dom.requestJsonPreview.innerHTML = syntaxHighlightJSON(payload);
+    if (dom.curlOutput) {
+      dom.curlOutput.textContent = buildCurlCommand();
+    }
   }
 
   function buildCurlCommand() {
@@ -1567,6 +1658,83 @@
       sendRequest();
     }
   });
+
+  // ── Panel Divider Drag ──
+  (function() {
+    function setupDivider(divider, leftPanel, rightPanel) {
+      let isDragging = false;
+      let startX = 0;
+      let startLeftWidth = 0;
+      let startRightWidth = 0;
+      let totalWidth = 0;
+
+      function onMouseMove(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const deltaPct = (dx / totalWidth) * 100;
+        const newLeftPct = Math.max(15, Math.min(85, startLeftWidth + deltaPct));
+        const newRightPct = 100 - newLeftPct;
+        leftPanel.style.width = newLeftPct + '%';
+        rightPanel.style.width = newRightPct + '%';
+      }
+
+      function onMouseUp() {
+        if (!isDragging) return;
+        isDragging = false;
+        divider.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+
+      divider.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        divider.classList.add('dragging');
+        startX = e.clientX;
+        totalWidth = divider.parentElement.getBoundingClientRect().width;
+        startLeftWidth = parseFloat(leftPanel.style.width) || leftPanel.offsetWidth / totalWidth * 100;
+        startRightWidth = parseFloat(rightPanel.style.width) || rightPanel.offsetWidth / totalWidth * 100;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+
+      divider.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        divider.classList.add('dragging');
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        totalWidth = divider.parentElement.getBoundingClientRect().width;
+        startLeftWidth = parseFloat(leftPanel.style.width) || leftPanel.offsetWidth / totalWidth * 100;
+        startRightWidth = parseFloat(rightPanel.style.width) || rightPanel.offsetWidth / totalWidth * 100;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      }, { passive: false });
+
+      document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        const dx = touch.clientX - startX;
+        const deltaPct = (dx / totalWidth) * 100;
+        const newLeftPct = Math.max(15, Math.min(85, startLeftWidth + deltaPct));
+        const newRightPct = 100 - newLeftPct;
+        leftPanel.style.width = newLeftPct + '%';
+        rightPanel.style.width = newRightPct + '%';
+      }, { passive: false });
+
+      document.addEventListener('touchend', onMouseUp);
+    }
+
+    const leftPanel = document.querySelector('.panel-left');
+    const middlePanel = document.querySelector('.panel-middle');
+    const rightPanel = document.querySelector('.panel-right');
+
+    setupDivider(dom.panelDivider1, leftPanel, middlePanel);
+    setupDivider(dom.panelDivider2, middlePanel, rightPanel);
+  })();
 
   // ── Init ──
   // Add one default question
