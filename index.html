@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Model Playground</title>
+<style>
+  :root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+    --border: #30363d;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #6e7681;
+    --accent: #58a6ff;
+    --accent-hover: #79b8ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --orange: #d2991d;
+    --purple: #bc8cff;
+    --json-key: #7ee787;
+    --json-string: #a5d6ff;
+    --json-number: #79c0ff;
+    --json-bool: #ff7b72;
+    --json-null: #d2a8ff;
+    --radius: 8px;
+    --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  header h1 .icon { font-size: 18px; }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+  .status-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.error { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+  .status-text {
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  #modelSelect {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 5px 8px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    outline: none;
+    cursor: pointer;
+    min-width: 180px;
+  }
+  #modelSelect:focus { border-color: var(--accent); }
+
+  .endpoint-badge {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--purple);
+    background: rgba(188,140,255,0.1);
+    border: 1px solid rgba(188,140,255,0.3);
+    border-radius: 4px;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+
+  /* ── Main Layout ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-left {
+    width: 55%;
+    border-right: 1px solid var(--border);
+  }
+
+  .panel-right {
+    width: 45%;
+  }
+
+  .panel-header {
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+  }
+
+  /* ── Form Elements ── */
+  .form-group {
+    margin-bottom: 12px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="url"],
+  select,
+  textarea {
+    width: 100%;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 9px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  textarea {
+    resize: vertical;
+    line-height: 1.5;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+
+  .row {
+    display: flex;
+    gap: 8px;
+  }
+  .row > * { flex: 1; }
+
+  .param-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* ── Questions Section ── */
+  .questions-section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    margin-bottom: 12px;
+  }
+
+  .questions-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .questions-header .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .question-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+
+  .question-card:last-child { margin-bottom: 0; }
+
+  .question-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .question-card-header .q-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    font-family: var(--font-mono);
+  }
+
+  .question-card-header .q-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .question-card-header .q-remove:hover { color: var(--red); background: rgba(248,81,73,0.1); }
+
+  .question-card .field {
+    margin-bottom: 6px;
+  }
+  .question-card .field:last-child { margin-bottom: 0; }
+
+  .question-card input,
+  .question-card select,
+  .question-card textarea {
+    font-size: 11px;
+    padding: 5px 7px;
+  }
+
+  .question-card textarea {
+    min-height: 40px;
+  }
+
+  .criteria-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .criteria-list li {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 4px;
+    align-items: center;
+  }
+
+  .criteria-list li input {
+    flex: 1;
+  }
+
+  .criteria-list li .remove-criteria {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0 4px;
+  }
+  .criteria-list li .remove-criteria:hover { color: var(--red); }
+
+  .btn-add-criteria {
+    font-size: 11px;
+    padding: 3px 8px;
+    margin-top: 4px;
+  }
+
+  .btn-add-question {
+    font-size: 11px;
+    padding: 5px 10px;
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  /* ── Image Section ── */
+  .image-section {
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    margin-bottom: 12px;
+  }
+
+  .image-section .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .image-previews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .image-preview {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .image-preview .remove-btn {
+    position: absolute;
+    top: 2px; right: 2px;
+    width: 16px; height: 16px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .image-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 5px 12px;
+    border-radius: var(--radius);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+    font-family: var(--font-sans);
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+
+  .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+  .btn-secondary:hover { background: var(--border); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border-color: var(--red);
+  }
+  .btn-danger:hover { background: rgba(248,81,73,0.1); }
+
+  .btn-sm {
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+
+  #fileInput { display: none; }
+
+  .url-row {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+  }
+  .url-row input { flex: 1; }
+
+  /* ── Actions Row ── */
+  .actions-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn-send {
+    flex: 1;
+    padding: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--green);
+    color: #fff;
+    border-color: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .btn-send:hover { background: #2ea043; }
+  .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-clear {
+    background: transparent;
+    color: var(--text-secondary);
+    border-color: var(--border);
+  }
+  .btn-clear:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+
+  /* ── Request JSON Preview ── */
+  .request-preview {
+    margin-top: 10px;
+  }
+
+  .request-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+  }
+
+  .request-preview-header span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .request-json {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.5;
+    max-height: 180px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .json-key { color: var(--json-key); }
+  .json-string { color: var(--json-string); }
+  .json-number { color: var(--json-number); }
+  .json-bool { color: var(--json-bool); }
+  .json-null { color: var(--json-null); }
+
+  /* ── Response Panel ── */
+  .response-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .response-tab {
+    padding: 7px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font-sans);
+  }
+  .response-tab:hover { color: var(--text-primary); }
+  .response-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .response-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .response-placeholder {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 12px;
+    text-align: center;
+    padding-top: 30px;
+  }
+
+  .response-error {
+    color: var(--red);
+    font-size: 12px;
+  }
+
+  /* ── Structured Answer Display ── */
+  .answer-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    margin-bottom: 6px;
+  }
+
+  .answer-item .answer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .answer-item .answer-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    font-family: var(--font-mono);
+  }
+
+  .answer-item .answer-type {
+    font-size: 10px;
+    color: var(--text-muted);
+    background: var(--bg-tertiary);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  .answer-item .answer-result {
+    font-size: 12px;
+    margin: 4px 0;
+  }
+
+  .answer-item .answer-result .highlight {
+    color: var(--green);
+    font-weight: 600;
+  }
+
+  .answer-item .answer-choices {
+    margin-top: 6px;
+  }
+
+  .answer-item .answer-choice-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .answer-item .answer-choice-row:last-child {
+    border-bottom: none;
+  }
+
+  .answer-item .answer-choice-row.winner {
+    background: rgba(63, 185, 80, 0.08);
+    border-radius: 4px;
+    padding: 3px 6px;
+    margin: 0 -6px;
+  }
+
+  .answer-item .answer-choice-name {
+    flex: 1;
+    font-size: 11px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .answer-item .answer-choice-bar {
+    width: 80px;
+    height: 6px;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .answer-item .answer-choice-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+
+  .answer-item .answer-choice-pct {
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+
+  .answer-item .answer-choice-winner {
+    color: var(--green);
+    font-weight: 600;
+  }
+
+  .answer-item .answer-confidence {
+    font-size: 10px;
+    color: var(--orange);
+    margin-top: 4px;
+  }
+
+  .answer-item .answer-score {
+    font-size: 12px;
+    color: var(--purple);
+    font-weight: 600;
+  }
+
+  .response-meta {
+    display: flex;
+    gap: 12px;
+    padding: 6px 14px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .response-meta span { display: flex; align-items: center; gap: 3px; }
+
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+
+  /* ── curl preview ── */
+  .curl-section {
+    margin-top: 8px;
+  }
+
+  .curl-output {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 120px;
+    overflow-y: auto;
+    color: var(--text-secondary);
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .main { flex-direction: column; }
+    .panel-left { width: 100%; height: 55%; border-right: none; border-bottom: 1px solid var(--border); }
+    .panel-right { width: 100%; height: 45%; }
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="icon">🧠</span> Decision Model Playground</h1>
+  <div class="header-right">
+    <span class="status-dot" id="statusDot" title="Ollama status"></span>
+    <span class="status-text" id="statusText">Checking…</span>
+    <span class="endpoint-badge">/v1/systemone</span>
+    <select id="modelSelect" title="Select model">
+      <option value="">Loading models…</option>
+    </select>
+  </div>
+</header>
+
+<div class="main">
+  <!-- ── LEFT PANEL: Request ── -->
+  <div class="panel panel-left">
+    <div class="panel-header">
+      <span>Request</span>
+      <button class="btn btn-sm btn-secondary" id="btnCopyRequest" title="Copy request JSON">📋 Copy JSON</button>
+    </div>
+    <div class="panel-body">
+      <!-- Model -->
+      <div class="form-group">
+        <label for="modelInput">Model</label>
+        <input type="text" id="modelInput" value="clef-flash:9b" placeholder="e.g. clef-flash:9b">
+      </div>
+
+      <!-- State -->
+      <div class="form-group">
+        <label for="stateInput">State</label>
+        <textarea id="stateInput" placeholder="The context, text, or input to make decisions about…" style="min-height:70px;"></textarea>
+        <div class="param-hint">The input text or JSON object that provides context for the decision questions</div>
+      </div>
+
+      <!-- Questions -->
+      <div class="questions-section">
+        <div class="questions-header">
+          <span class="section-title">Questions</span>
+          <button class="btn btn-sm btn-secondary" id="btnAddQuestion">+ Add Question</button>
+        </div>
+        <div id="questionsContainer"></div>
+      </div>
+
+      <!-- Images -->
+      <div class="image-section">
+        <div class="section-title">📎 Images (Clef models only)</div>
+        <div class="image-previews" id="imagePreviews"></div>
+        <div class="image-actions">
+          <button class="btn btn-secondary" id="btnUploadImage">Upload Files</button>
+          <input type="file" id="fileInput" accept="image/*" multiple>
+          <span style="color:var(--text-muted);font-size:11px;">or</span>
+          <div class="url-row">
+            <input type="url" id="imageUrlInput" placeholder="Image URL…">
+            <button class="btn btn-secondary btn-sm" id="btnAddUrl">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions-row">
+        <button class="btn btn-send" id="btnSend">▶ Send</button>
+        <button class="btn btn-clear" id="btnClear">Clear</button>
+      </div>
+
+      <!-- Request JSON Preview -->
+      <div class="request-preview">
+        <div class="request-preview-header">
+          <span>Request JSON</span>
+          <button class="btn btn-sm btn-secondary" id="btnCopyCurl" title="Copy equivalent cURL command">📋 cURL</button>
+        </div>
+        <div class="request-json" id="requestJsonPreview">{}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT PANEL: Response ── -->
+  <div class="panel panel-right">
+    <div class="panel-header">
+      <span>Response</span>
+      <button class="btn btn-sm btn-secondary" id="btnCopyResponse" title="Copy response">📋 Copy</button>
+    </div>
+    <div class="response-tabs">
+      <button class="response-tab active" data-tab="answers">Answers</button>
+      <button class="response-tab" data-tab="raw">Raw JSON</button>
+    </div>
+    <div class="response-content" id="responseOutput">
+      <div class="response-placeholder">Send a request to see the model's answers here…</div>
+    </div>
+    <div class="response-meta" id="responseMeta" style="display:none;">
+      <span id="metaStatus"></span>
+      <span id="metaTime"></span>
+      <span id="metaTokens"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── State ──
+  const state = {
+    model: 'clef-flash:9b',
+    images: [],
+    questions: [],
+    lastResponse: null,
+    ollamaBase: 'http://localhost:11434'
+  };
+
+  // ── DOM refs ──
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+
+  const dom = {
+    modelSelect: $('#modelSelect'),
+    modelInput: $('#modelInput'),
+    stateInput: $('#stateInput'),
+    imagePreviews: $('#imagePreviews'),
+    fileInput: $('#fileInput'),
+    imageUrlInput: $('#imageUrlInput'),
+    requestJsonPreview: $('#requestJsonPreview'),
+    responseOutput: $('#responseOutput'),
+    responseMeta: $('#responseMeta'),
+    metaStatus: $('#metaStatus'),
+    metaTime: $('#metaTime'),
+    metaTokens: $('#metaTokens'),
+    statusDot: $('#statusDot'),
+    statusText: $('#statusText'),
+    toast: $('#toast'),
+    btnSend: $('#btnSend'),
+    btnClear: $('#btnClear'),
+    btnUploadImage: $('#btnUploadImage'),
+    btnAddUrl: $('#btnAddUrl'),
+    btnAddQuestion: $('#btnAddQuestion'),
+    questionsContainer: $('#questionsContainer'),
+    btnCopyRequest: $('#btnCopyRequest'),
+    btnCopyResponse: $('#btnCopyResponse'),
+    btnCopyCurl: $('#btnCopyCurl'),
+  };
+
+  // ── Toast ──
+  let toastTimer = null;
+  function showToast(msg) {
+    dom.toast.textContent = msg;
+    dom.toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => dom.toast.classList.remove('show'), 2200);
+  }
+
+  // ── Ollama Health Check ──
+  async function checkOllama() {
+    try {
+      const res = await fetch(`${state.ollamaBase}/api/tags`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        const data = await res.json();
+        populateModels(data.models || []);
+        setStatus('connected', `Ollama ready (${(data.models || []).length} model(s))`);
+        return true;
+      }
+    } catch (e) { /* Ollama not reachable */ }
+    setStatus('error', 'Cannot reach Ollama');
+    return false;
+  }
+
+  function populateModels(models) {
+    dom.modelSelect.innerHTML = '';
+    if (models.length === 0) {
+      dom.modelSelect.innerHTML = '<option value="">No models found</option>';
+      return;
+    }
+    models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.name;
+      const sizeStr = m.size ? ` (${(m.size / 1e9).toFixed(1)} GB)` : '';
+      opt.textContent = m.name + sizeStr;
+      if (m.name === state.model) opt.selected = true;
+      dom.modelSelect.appendChild(opt);
+    });
+    dom.modelInput.value = state.model;
+  }
+
+  function setStatus(status, text) {
+    dom.statusDot.className = 'status-dot' + (status === 'connected' ? ' connected' : status === 'error' ? ' error' : '');
+    dom.statusText.textContent = text;
+  }
+
+  // ── Image Handling ──
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function fetchImageFromUrl(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function renderImagePreviews() {
+    dom.imagePreviews.innerHTML = '';
+    state.images.forEach((img, idx) => {
+      const div = document.createElement('div');
+      div.className = 'image-preview';
+      const imgEl = document.createElement('img');
+      imgEl.src = `data:image/png;base64,${img}`;
+      imgEl.alt = `image-${idx}`;
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', () => {
+        state.images.splice(idx, 1);
+        renderImagePreviews();
+        updateRequestPreview();
+      });
+      div.appendChild(imgEl);
+      div.appendChild(removeBtn);
+      dom.imagePreviews.appendChild(div);
+    });
+  }
+
+  async function handleFileUpload(e) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) continue;
+      const base64 = await readFileAsBase64(file);
+      state.images.push(base64);
+    }
+    renderImagePreviews();
+    updateRequestPreview();
+    dom.fileInput.value = '';
+  }
+
+  async function handleAddImageUrl() {
+    const url = dom.imageUrlInput.value.trim();
+    if (!url) return;
+    try {
+      showToast('Fetching image…');
+      const base64 = await fetchImageFromUrl(url);
+      state.images.push(base64);
+      renderImagePreviews();
+      updateRequestPreview();
+      dom.imageUrlInput.value = '';
+      showToast('Image added');
+    } catch (err) {
+      showToast('Failed to fetch image: ' + err.message);
+    }
+  }
+
+  // ── Questions Management ──
+  function createQuestionTemplate() {
+    return {
+      name: 'q' + Date.now(),
+      type: 'noul',
+      instructions: '',
+      criteria: [
+        { key: 'false', value: '' },
+        { key: 'true', value: '' }
+      ]
+    };
+  }
+
+  function renderQuestions() {
+    dom.questionsContainer.innerHTML = '';
+    state.questions.forEach((q, idx) => {
+      const card = document.createElement('div');
+      card.className = 'question-card';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'question-card-header';
+
+      const label = document.createElement('span');
+      label.className = 'q-label';
+      label.textContent = q.name;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'q-remove';
+      removeBtn.textContent = '✕';
+      removeBtn.title = 'Remove question';
+      removeBtn.addEventListener('click', () => {
+        state.questions.splice(idx, 1);
+        renderQuestions();
+        updateRequestPreview();
+      });
+
+      header.appendChild(label);
+      header.appendChild(removeBtn);
+      card.appendChild(header);
+
+      // Name input
+      const nameField = createField('Name', 'text', q.name, (val) => {
+        q.name = val;
+        label.textContent = val;
+        updateRequestPreview();
+      });
+      card.appendChild(nameField);
+
+      // Type select
+      const typeField = createField('Type', 'select', q.type, (val) => {
+        q.type = val;
+        // Reset criteria based on type
+        if (val === 'noul') {
+          q.criteria = [
+            { key: 'false', value: '' },
+            { key: 'true', value: '' }
+          ];
+        } else if (val === 'choice') {
+          q.criteria = [
+            { key: 'option_a', value: '' },
+            { key: 'option_b', value: '' }
+          ];
+        } else if (val === 'score') {
+          q.criteria = ['Level 1', 'Level 2'];
+        }
+        renderQuestions();
+        updateRequestPreview();
+      }, ['noul', 'choice', 'score']);
+      card.appendChild(typeField);
+
+      // Instructions
+      const instrField = createField('Instructions', 'textarea', q.instructions, (val) => {
+        q.instructions = val;
+        updateRequestPreview();
+      });
+      card.appendChild(instrField);
+
+      // Criteria
+      const criteriaLabel = document.createElement('label');
+      criteriaLabel.style.cssText = 'font-size:10px;color:var(--text-muted);display:block;margin-top:6px;margin-bottom:3px;';
+      criteriaLabel.textContent = 'Criteria';
+      card.appendChild(criteriaLabel);
+
+      const criteriaContainer = document.createElement('div');
+      criteriaContainer.className = 'criteria-container';
+
+      if (q.type === 'noul') {
+        renderNoulCriteria(card, q, criteriaContainer, idx);
+      } else if (q.type === 'choice') {
+        renderChoiceCriteria(card, q, criteriaContainer, idx);
+      } else if (q.type === 'score') {
+        renderScoreCriteria(card, q, criteriaContainer, idx);
+      }
+
+      card.appendChild(criteriaContainer);
+      dom.questionsContainer.appendChild(card);
+    });
+  }
+
+  function renderNoulCriteria(card, q, container, idx) {
+    const falseItem = q.criteria.find(item => item.key === 'false') || q.criteria[0];
+    const trueItem = q.criteria.find(item => item.key === 'true') || q.criteria[1];
+
+    const falseField = createField('False', 'text', falseItem ? falseItem.value : '', (val) => {
+      if (falseItem) falseItem.value = val;
+      updateRequestPreview();
+    });
+    container.appendChild(falseField);
+
+    const trueField = createField('True', 'text', trueItem ? trueItem.value : '', (val) => {
+      if (trueItem) trueItem.value = val;
+      updateRequestPreview();
+    });
+    container.appendChild(trueField);
+  }
+
+  function renderChoiceCriteria(card, q, container, idx) {
+    const list = document.createElement('ul');
+    list.className = 'criteria-list';
+
+    function renderItems() {
+      list.innerHTML = '';
+      q.criteria.forEach((item, ci) => {
+        const li = document.createElement('li');
+
+        const labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.value = item.key;
+        labelInput.placeholder = 'Label';
+        labelInput.addEventListener('input', () => {
+          item.key = labelInput.value;
+          updateRequestPreview();
+        });
+
+        const descInput = document.createElement('input');
+        descInput.type = 'text';
+        descInput.value = item.value;
+        descInput.placeholder = 'Description';
+        descInput.style.flex = '2';
+        descInput.addEventListener('input', () => {
+          item.value = descInput.value;
+          updateRequestPreview();
+        });
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-criteria';
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', () => {
+          q.criteria.splice(ci, 1);
+          renderItems();
+          updateRequestPreview();
+        });
+
+        li.appendChild(labelInput);
+        li.appendChild(descInput);
+        li.appendChild(removeBtn);
+        list.appendChild(li);
+      });
+    }
+
+    renderItems();
+    container.appendChild(list);
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn btn-sm btn-secondary btn-add-criteria';
+    addBtn.textContent = '+ Add option';
+    addBtn.addEventListener('click', () => {
+      q.criteria.push({ key: '', value: '' });
+      renderItems();
+      updateRequestPreview();
+    });
+    container.appendChild(addBtn);
+  }
+
+  function renderScoreCriteria(card, q, container, idx) {
+    const list = document.createElement('ul');
+    list.className = 'criteria-list';
+
+    q.criteria.forEach((crit, ci) => {
+      const li = document.createElement('li');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = crit;
+      input.placeholder = `Level ${ci + 1}`;
+      input.addEventListener('input', () => {
+        q.criteria[ci] = input.value;
+        updateRequestPreview();
+      });
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-criteria';
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', () => {
+        q.criteria.splice(ci, 1);
+        renderQuestions();
+        updateRequestPreview();
+      });
+
+      li.appendChild(input);
+      li.appendChild(removeBtn);
+      list.appendChild(li);
+    });
+
+    container.appendChild(list);
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn btn-sm btn-secondary btn-add-criteria';
+    addBtn.textContent = '+ Add level';
+    addBtn.addEventListener('click', () => {
+      q.criteria.push('');
+      renderQuestions();
+      updateRequestPreview();
+    });
+    container.appendChild(addBtn);
+  }
+
+  function createField(label, type, value, onChange, options) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'field';
+
+    const lbl = document.createElement('label');
+    lbl.style.cssText = 'font-size:10px;color:var(--text-muted);display:block;margin-bottom:2px;';
+    lbl.textContent = label;
+    wrapper.appendChild(lbl);
+
+    if (type === 'select') {
+      const sel = document.createElement('select');
+      options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        if (opt === value) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', () => onChange(sel.value));
+      wrapper.appendChild(sel);
+    } else if (type === 'textarea') {
+      const ta = document.createElement('textarea');
+      ta.value = value || '';
+      ta.placeholder = label;
+      ta.addEventListener('input', () => onChange(ta.value));
+      wrapper.appendChild(ta);
+    } else {
+      const inp = document.createElement('input');
+      inp.type = type;
+      inp.value = value || '';
+      inp.placeholder = label;
+      inp.addEventListener('input', () => onChange(inp.value));
+      wrapper.appendChild(inp);
+    }
+
+    return wrapper;
+  }
+
+  // ── Request Preview ──
+  function buildRequestPayload() {
+    const payload = {
+      model: dom.modelInput.value.trim() || state.model,
+      state: dom.stateInput.value.trim(),
+      questions: {}
+    };
+
+    if (state.images.length > 0) {
+      payload.images = state.images;
+    }
+
+    state.questions.forEach(q => {
+      const question = {
+        type: q.type,
+        instructions: q.instructions
+      };
+
+      if (q.type === 'noul') {
+        // Convert array of {key, value} to dict, skip empty keys
+        const criteria = {};
+        q.criteria.forEach(item => { if (item.key) criteria[item.key] = item.value; });
+        question.criteria = criteria;
+      } else if (q.type === 'choice') {
+        // Convert array of {key, value} to dict, skip empty keys
+        const criteria = {};
+        q.criteria.forEach(item => { if (item.key) criteria[item.key] = item.value; });
+        question.criteria = criteria;
+      } else if (q.type === 'score') {
+        question.criteria = q.criteria;
+      }
+
+      payload.questions[q.name] = question;
+    });
+
+    return payload;
+  }
+
+  function syntaxHighlightJSON(json) {
+    if (!json) return '';
+    json = JSON.stringify(json, null, 2);
+    return json.replace(
+      /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      (match) => {
+        let cls = 'json-number';
+        if (/^"/.test(match)) {
+          cls = /:$/.test(match) ? 'json-key' : 'json-string';
+        } else if (/true|false/.test(match)) {
+          cls = 'json-bool';
+        } else if (/null/.test(match)) {
+          cls = 'json-null';
+        }
+        return `<span class="${cls}">${match}</span>`;
+      }
+    );
+  }
+
+  function updateRequestPreview() {
+    const payload = buildRequestPayload();
+    dom.requestJsonPreview.innerHTML = syntaxHighlightJSON(payload);
+  }
+
+  function buildCurlCommand() {
+    const payload = buildRequestPayload();
+    const jsonStr = JSON.stringify(payload);
+    return `curl ${state.ollamaBase}/v1/systemone \\\n  -H "Content-Type: application/json" \\\n  -d '${jsonStr}'`;
+  }
+
+  // ── Send Request ──
+  async function sendRequest() {
+    const payload = buildRequestPayload();
+    if (!payload.state && Object.keys(payload.questions).length === 0) {
+      showToast('Enter a state and at least one question');
+      return;
+    }
+
+    dom.btnSend.disabled = true;
+    dom.btnSend.textContent = '⏳ Sending…';
+    setStatus('connected', 'Sending…');
+
+    const startTime = performance.now();
+
+    try {
+      const res = await fetch(`${state.ollamaBase}/v1/systemone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errBody}`);
+      }
+
+      const data = await res.json();
+      const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+
+      state.lastResponse = data;
+
+      // Display structured answers
+      renderAnswers(data);
+
+      // Show meta
+      dom.responseMeta.style.display = 'flex';
+      dom.metaStatus.textContent = '✓ Done';
+      dom.metaTime.textContent = `${elapsed}s`;
+      dom.metaTokens.textContent = data.usage
+        ? `in:${data.usage.input_tokens} out:${data.usage.output_tokens}`
+        : '';
+
+      setStatus('connected', 'Ollama ready');
+      showToast('Request complete');
+
+    } catch (err) {
+      dom.responseOutput.innerHTML = `<span class="response-error">Error: ${escapeHtml(err.message)}</span>`;
+      dom.responseMeta.style.display = 'flex';
+      dom.metaStatus.textContent = '✗ Error';
+      dom.metaStatus.style.color = 'var(--red)';
+      setStatus('error', 'Request failed');
+      showToast('Request failed');
+    } finally {
+      dom.btnSend.disabled = false;
+      dom.btnSend.textContent = '▶ Send';
+      updateRequestPreview();
+    }
+  }
+
+  function renderAnswers(data) {
+    if (!data.answers || Object.keys(data.answers).length === 0) {
+      dom.responseOutput.innerHTML = '<div class="response-placeholder">No answers returned</div>';
+      return;
+    }
+
+    let html = '';
+
+    for (const [name, answer] of Object.entries(data.answers)) {
+      html += '<div class="answer-item">';
+
+      // Header
+      html += '<div class="answer-header">';
+      html += `<span class="answer-name">${escapeHtml(name)}</span>`;
+      html += `<span class="answer-type">${escapeHtml(answer.type)}</span>`;
+      html += '</div>';
+
+      // Result based on type
+      if (answer.type === 'noul') {
+        const prob = answer.noul != null ? (answer.noul * 100).toFixed(1) : '?';
+        const label = answer.noul >= 0.5 ? 'TRUE' : 'FALSE';
+        const cls = answer.noul >= 0.5 ? 'highlight' : '';
+        html += `<div class="answer-result"><span class="${cls}">${label}</span> — <strong>${prob}%</strong></div>`;
+      } else if (answer.type === 'choice') {
+        const chosen = answer.choice || '';
+        html += `<div class="answer-result"><span class="answer-choice-winner">✓ ${escapeHtml(chosen)}</span></div>`;
+        if (answer.probabilities) {
+          html += '<div class="answer-choices">';
+          // Find max probability for scaling
+          const probs = Object.entries(answer.probabilities);
+          const maxProb = Math.max(...probs.map(([, p]) => p), 0.001);
+          for (const [opt, prob] of probs) {
+            const pct = (prob * 100).toFixed(1);
+            const isWinner = opt === chosen;
+            const barWidth = Math.round((prob / maxProb) * 100);
+            html += `<div class="answer-choice-row ${isWinner ? 'winner' : ''}">`;
+            html += `<span class="answer-choice-name">${escapeHtml(opt)}</span>`;
+            html += `<div class="answer-choice-bar"><div class="answer-choice-fill" style="width:${barWidth}%"></div></div>`;
+            html += `<span class="answer-choice-pct">${pct}%</span>`;
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+      } else if (answer.type === 'score') {
+        html += `<div class="answer-result">Score: <span class="answer-score">${answer.score != null ? answer.score.toFixed(4) : '?'}</span></div>`;
+        if (answer.probabilities) {
+          html += '<div class="answer-choices">';
+          const levels = answer.criteria || [];
+          const maxProb = Math.max(...answer.probabilities, 0.001);
+          for (let i = 0; i < levels.length; i++) {
+            const prob = answer.probabilities[i] || 0;
+            const pct = (prob * 100).toFixed(1);
+            const barWidth = Math.round((prob / maxProb) * 100);
+            html += `<div class="answer-choice-row">`;
+            html += `<span class="answer-choice-name">${escapeHtml(levels[i])}</span>`;
+            html += `<div class="answer-choice-bar"><div class="answer-choice-fill" style="width:${barWidth}%"></div></div>`;
+            html += `<span class="answer-choice-pct">${pct}%</span>`;
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+      }
+
+      if (answer.confidence != null) {
+        html += `<div class="answer-confidence">Confidence: ${(answer.confidence * 100).toFixed(1)}%</div>`;
+      }
+
+      html += '</div>';
+    }
+
+    dom.responseOutput.innerHTML = html;
+  }
+
+  function escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
+
+  // ── Tabs ──
+  function switchTab(tab) {
+    $$('.response-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+
+    if (tab === 'raw') {
+      dom.responseOutput.innerHTML = syntaxHighlightJSON(state.lastResponse || buildRequestPayload());
+    } else if (tab === 'answers') {
+      if (state.lastResponse) {
+        renderAnswers(state.lastResponse);
+      } else {
+        dom.responseOutput.innerHTML = '<div class="response-placeholder">Send a request to see the model\'s answers here…</div>';
+      }
+    }
+  }
+
+  // ── Clear ──
+  function clearAll() {
+    dom.stateInput.value = '';
+    state.images = [];
+    state.questions = [];
+    state.lastResponse = null;
+    renderImagePreviews();
+    renderQuestions();
+    dom.responseOutput.innerHTML = '<div class="response-placeholder">Send a request to see the model\'s answers here…</div>';
+    dom.responseMeta.style.display = 'none';
+    updateRequestPreview();
+  }
+
+  // ── Copy ──
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => showToast('Copied!')).catch(() => showToast('Copy failed'));
+  }
+
+  // ── Event Listeners ──
+  dom.btnSend.addEventListener('click', sendRequest);
+  dom.btnClear.addEventListener('click', clearAll);
+  dom.btnUploadImage.addEventListener('click', () => dom.fileInput.click());
+  dom.fileInput.addEventListener('change', handleFileUpload);
+  dom.btnAddUrl.addEventListener('click', handleAddImageUrl);
+  dom.imageUrlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAddImageUrl(); });
+
+  dom.btnAddQuestion.addEventListener('click', () => {
+    state.questions.push(createQuestionTemplate());
+    renderQuestions();
+    updateRequestPreview();
+  });
+
+  dom.btnCopyRequest.addEventListener('click', () => {
+    copyToClipboard(JSON.stringify(buildRequestPayload(), null, 2));
+  });
+
+  dom.btnCopyResponse.addEventListener('click', () => {
+    copyToClipboard(dom.responseOutput.textContent || '');
+  });
+
+  dom.btnCopyCurl.addEventListener('click', () => {
+    copyToClipboard(buildCurlCommand());
+  });
+
+  // Model selector sync
+  dom.modelSelect.addEventListener('change', () => {
+    state.model = dom.modelSelect.value;
+    dom.modelInput.value = state.model;
+    updateRequestPreview();
+  });
+
+  dom.modelInput.addEventListener('input', () => {
+    state.model = dom.modelInput.value;
+    updateRequestPreview();
+  });
+
+  // State input updates preview live
+  dom.stateInput.addEventListener('input', updateRequestPreview);
+
+  // Tab switching
+  $$('.response-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+  });
+
+  // Keyboard shortcut: Ctrl+Enter to send
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      sendRequest();
+    }
+  });
+
+  // ── Init ──
+  // Add one default question
+  state.questions.push(createQuestionTemplate());
+  renderQuestions();
+  updateRequestPreview();
+  checkOllama();
+
+  // Re-check every 10 seconds
+  setInterval(checkOllama, 10000);
+
+})();
+</script>
+
+</body>
+</html>
